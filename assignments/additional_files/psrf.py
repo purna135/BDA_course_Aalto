@@ -98,33 +98,31 @@ def psrf(X, return_extra=False):
     if not return_extra:
         return R
 
-    else:
-        # autocorrelation
-        temp_1 = np.empty_like(X)
-        rho = np.ones((N, D))
-        for t in range(1, N):
-            tempslice = temp_1[:, :-t]
-            np.subtract(X[:, :-t], X[:, t:], out=tempslice)
-            np.square(tempslice, out=tempslice)
-            np.sum(tempslice, axis=(0,1), out=rho[t])
-            rho[t] /= 2*M*(N-t)*Vh
-        np.subtract(1, rho[1:], out=rho[1:])
+    # autocorrelation
+    temp_1 = np.empty_like(X)
+    rho = np.ones((N, D))
+    for t in range(1, N):
+        tempslice = temp_1[:, :-t]
+        np.subtract(X[:, :-t], X[:, t:], out=tempslice)
+        np.square(tempslice, out=tempslice)
+        np.sum(tempslice, axis=(0,1), out=rho[t])
+        rho[t] /= 2*M*(N-t)*Vh
+    np.subtract(1, rho[1:], out=rho[1:])
 
-        # effective sample size
-        mid = N//2
-        cp = np.sum(np.reshape(rho[:2*mid], (mid, 2, D)), axis=1)
-        # the following could be Cythonised
-        ci = np.argmax(cp<0, axis=0)
-        no_init_pos = np.nonzero(np.all(cp>=0, axis=0))[0]
-        if len(no_init_pos) > 0:
-            print (
-                "Initial positive could not be found for variable(s) {}, "
-                "maxlag value used."
-                .format(no_init_pos+1)
-            )
-            ci[no_init_pos] = mid
-        cp *= np.arange(mid)[:, np.newaxis] < ci
-        tau = -1 + 2*np.sum(cp, axis=0)
-        neff = M*N/tau
+    # effective sample size
+    mid = N//2
+    cp = np.sum(np.reshape(rho[:2*mid], (mid, 2, D)), axis=1)
+    # the following could be Cythonised
+    ci = np.argmax(cp<0, axis=0)
+    no_init_pos = np.nonzero(np.all(cp>=0, axis=0))[0]
+    if len(no_init_pos) > 0:
+        print(
+            f"Initial positive could not be found for variable(s) {no_init_pos + 1}, maxlag value used."
+        )
 
-        return R, neff, Vh, W, B, tau
+        ci[no_init_pos] = mid
+    cp *= np.arange(mid)[:, np.newaxis] < ci
+    tau = -1 + 2*np.sum(cp, axis=0)
+    neff = M*N/tau
+
+    return R, neff, Vh, W, B, tau
